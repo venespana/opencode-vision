@@ -1,0 +1,99 @@
+// opencode-vision.example.jsonc
+// Full example configuration for the opencode-vision plugin.
+// Copy to your project as .opencode/opencode-vision.jsonc or
+// user-level as ~/.config/opencode/opencode-vision.jsonc
+{
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Vision model patterns — force activation for these models (allowlist).
+  // Format: "providerID/modelID" or glob patterns like "providerID/*".
+  // These patterns ALWAYS activate vision bridging, overriding auto-detect.
+  // ─────────────────────────────────────────────────────────────────────────────
+  "models": [
+    "openai/gpt-4o-mini",
+    "anthropic/claude-3-haiku"
+  ],
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Force-off patterns — these models NEVER activate vision bridging.
+  // Takes precedence over `models` allowlist. Default: [] (empty).
+  // ─────────────────────────────────────────────────────────────────────────────
+  "denylist": [
+    "openai/gpt-4o"
+  ],
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Detection mode: how to decide if vision bridging is needed.
+  //   "auto"     — resolve via client.config.providers() capabilities only
+  //   "patterns" — only use models/denylist patterns (no auto-detect)
+  //   "hybrid"   — auto-detect, fall back to patterns when unresolvable (DEFAULT)
+  // ─────────────────────────────────────────────────────────────────────────────
+  "detection": "hybrid",
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Backend: how to analyze the image.
+  // type: "mcp"  — inject instructions telling the model to call an MCP tool (DEFAULT)
+  // type: "cli"  — spawn a CLI command and inject its stdout as description
+  // NOTE: type "tool" is NOT supported in v1.
+  // ─────────────────────────────────────────────────────────────────────────────
+  "backend": {
+    "type": "mcp",
+    // Required for type "mcp": the MCP tool to instruct the model to call.
+    "mcp": {
+      "tool": "openrouter_image_analyze",
+      "prompt": "Analyze this image and describe what you see.",
+      "format": "text",
+      "maxTokens": 512
+    },
+    // For type "cli":
+    // "cli": {
+    //   "command": "mmx",
+    //   "args": ["vision"],
+    //   "promptFlag": "--prompt",
+    //   "jsonFlag": "--json",
+    //   "env": { "API_KEY": "..." },
+    //   "timeoutMs": 30000  // default 30000ms
+    // }
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Prompt template injected into the chat when vision is activated.
+  // Placeholders: {imageCount} — number of images, {userText} — original text.
+  // If absent, a built-in maximum-detail template is used.
+  // ─────────────────────────────────────────────────────────────────────────────
+  "promptTemplate": "You have {imageCount} image(s). Describe each image in detail for the following request: {userText}",
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Directory for temporary image files saved from base64 pastes.
+  // Default: os.tmpdir()/opencode-vision/
+  // ─────────────────────────────────────────────────────────────────────────────
+  "tempDir": "/tmp/opencode-vision",
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // After how many hours to delete temporary image files on plugin init.
+  // Default: 24. Set to 0 to disable TTL cleanup.
+  // ─────────────────────────────────────────────────────────────────────────────
+  "cleanupAfterHours": 24,
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // When to run TTL cleanup:
+  //   "init"  — sweep tempDir on plugin initialization (DEFAULT)
+  //   "never" — never auto-delete; rely on OS tmp cleanup or manual cleanup
+  // ─────────────────────────────────────────────────────────────────────────────
+  "cleanup": "init",
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // CLI backend configuration (used when backend.type is "cli").
+  // command: the CLI executable to run
+  // args:    array of arguments; image paths/URLs and prompt are appended
+  // promptFlag:  if set, pass the prompt text via this flag (e.g. "--prompt")
+  // jsonFlag:    if set, add this flag to request JSON output
+  // env:         extra environment variables to pass to the subprocess
+  // timeoutMs:   timeout in milliseconds (default: 30000)
+  // ─────────────────────────────────────────────────────────────────────────────
+  "cli": {
+    "command": "mmx",
+    "args": ["vision"],
+    "promptFlag": "--prompt",
+    "timeoutMs": 30000
+  }
+}
