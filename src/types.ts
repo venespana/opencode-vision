@@ -56,10 +56,7 @@ export type CliBackendConfig = z.infer<typeof CliBackendConfigSchema>;
 export const BackendConfigSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('mcp'), mcp: McpBackendConfigSchema }),
   z.object({ type: z.literal('cli'), cli: CliBackendConfigSchema }),
-]).refine(
-  (data) => data.type !== 'tool',
-  { message: 'backend.type "tool" is not supported in v1. Use "mcp" or "cli".' },
-);
+]);
 export type BackendConfig = z.infer<typeof BackendConfigSchema>;
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -5,17 +5,26 @@ import { fileURLToPath } from 'url';
 import type { SavedImage } from './types.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
+// FilePart — from the SDK's Part union
+// ─────────────────────────────────────────────────────────────────────────────
+export interface FilePart {
+  type: 'file';
+  mime: string;
+  url: string;
+  id?: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Supported MIME types
 // ─────────────────────────────────────────────────────────────────────────────
 const SUPPORTED_MIMES = new Set(['image/png', 'image/jpeg', 'image/webp']);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // isSupportedImageFilePart — returns true if part is a supported image FilePart
-// part is a raw FilePart from the chat messages (before conversion to SavedImage)
 // ─────────────────────────────────────────────────────────────────────────────
 export function isSupportedImageFilePart(
   part: { type: string; mime?: string; url?: string },
-): part is { type: 'file'; mime: 'image/png' | 'image/jpeg' | 'image/webp'; url: string } {
+): part is FilePart {
   return part.type === 'file' && SUPPORTED_MIMES.has(part.mime ?? '');
 }
 
@@ -27,16 +36,16 @@ export function contentHash(buffer: Buffer): string {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// extractImages — converts FileParts to SavedImages, for base64 origin the url IS the data URL
+// extractImages — converts FileParts to SavedImages
 // ─────────────────────────────────────────────────────────────────────────────
-export function extractImages(parts: any[]): SavedImage[] {
+export function extractImages(parts: Array<{ type: string; mime?: string; url?: string; id?: string }>): SavedImage[] {
   return parts
     .filter(isSupportedImageFilePart)
-    .map((part) => {
+    .map((part: FilePart) => {
       const url = part.url ?? '';
       if (url.startsWith('data:')) {
         return {
-          partId: part.id,
+          partId: part.id ?? part.url,
           mime: part.mime as SavedImage['mime'],
           ref: '',
           origin: { kind: 'base64' as const, path: url },
@@ -45,7 +54,7 @@ export function extractImages(parts: any[]): SavedImage[] {
       if (url.startsWith('file://')) {
         const filePath = fileURLToPath(url);
         return {
-          partId: part.id,
+          partId: part.id ?? url,
           mime: part.mime as SavedImage['mime'],
           ref: filePath,
           origin: { kind: 'file' as const, path: filePath },
@@ -53,7 +62,7 @@ export function extractImages(parts: any[]): SavedImage[] {
       }
       if (url.startsWith('http://') || url.startsWith('https://')) {
         return {
-          partId: part.id,
+          partId: part.id ?? url,
           mime: part.mime as SavedImage['mime'],
           ref: url,
           origin: { kind: 'url' as const, url },
@@ -61,7 +70,7 @@ export function extractImages(parts: any[]): SavedImage[] {
       }
       // Fallback
       return {
-        partId: part.id,
+        partId: part.id ?? url,
         mime: part.mime as SavedImage['mime'],
         ref: url,
         origin: { kind: 'url' as const, url },
@@ -73,10 +82,10 @@ export function extractImages(parts: any[]): SavedImage[] {
 // materialize — write base64 image to temp file; for already-materialized images
 // (ref is already set), return immediately (idempotent).
 // ─────────────────────────────────────────────────────────────────────────────
-export async function materialize(
+export function materialize(
   image: SavedImage,
   tempDir: string,
-): Promise<SavedImage> {
+): SavedImage {
   const { partId, mime, origin } = image;
 
   if (origin.kind === 'base64') {
@@ -116,3 +125,4 @@ export async function materialize(
 
   return image;
 }
+

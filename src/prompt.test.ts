@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 
 describe('prompt', () => {
   let renderTemplate: (template: string, images: any[], userText: string) => string;
@@ -22,8 +22,6 @@ describe('prompt', () => {
 
   // S4b: default template structure check
   it('S4b: default template contains imageCount and userText placeholders', () => {
-    const result = renderTemplate('', [], '');
-    // The template (with 0 substituted) should be the default template applied
     expect(defaultMaximumDetailTemplate).toContain('{imageCount}');
     expect(defaultMaximumDetailTemplate).toContain('{userText}');
   });

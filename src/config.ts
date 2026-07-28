@@ -64,7 +64,7 @@ export function applyDefaults(merged: Record<string, unknown>): PluginConfig {
 //  3. user ~/.config/opencode/opencode-vision.{jsonc,json}
 //  4. defaults (applied via applyDefaults)
 // ─────────────────────────────────────────────────────────────────────────────
-export async function loadConfig(inlineOpts?: Partial<PluginConfig>): Promise<PluginConfig> {
+export function loadConfig(inlineOpts?: Partial<PluginConfig>): PluginConfig {
   const homeDir = process.env.HOME || os.homedir();
   const projectConfigPath = resolve('.opencode', 'opencode-vision');
   const userConfigPath = resolve(homeDir, '.config', 'opencode', 'opencode-vision');

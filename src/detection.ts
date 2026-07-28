@@ -1,4 +1,4 @@
-import { createHash } from 'crypto';
+// No crypto needed in detection — hashing is done in images.ts
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types (re-exported from types.ts for convenience)
@@ -90,7 +90,7 @@ async function resolveCapabilities(
 // Real SDK providers resolver — uses globalThis (SDK injects client there)
 // ─────────────────────────────────────────────────────────────────────────────
 async function realProvidersResolver() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const client = (globalThis as any).__opencode_client__;
   if (!client?.config?.providers) {
     return { providers: [] };

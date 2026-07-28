@@ -2,11 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import type { FilePart } from './types.js';
 
 describe('images', () => {
   let extractImages: (parts: any[]) => any[];
-  let materialize: (img: any, tempDir: string) => Promise<any>;
+  let materialize: (img: any, tempDir: string) => any;
   let contentHash: (buffer: Buffer) => string;
   let isSupportedImageFilePart: (part: any) => boolean;
 

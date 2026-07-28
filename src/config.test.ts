@@ -1,9 +1,8 @@
-import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { readJSONC, overlayDeep, applyDefaults } from './config.js';
-import { PluginConfigSchema } from './types.js';
 
 describe('config', () => {
   describe('readJSONC', () => {
