@@ -1,6 +1,6 @@
 {
   "name": "@venespana/opencode-vision",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "OpenCode plugin: vision for text-only models — intercepts pasted images, materializes to disk, routes to a VisionBackend, injects description back into chat context.",
   "type": "module",
   "packageManager": "pnpm@11.18.0",
