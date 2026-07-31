@@ -62,19 +62,19 @@ Two injection modes exist (chosen automatically by backend type):
 ```bash
 git clone <this-repo> opencode-vision
 cd opencode-vision
-npm install
-npm run build      # emits dist/index.js (the plugin entry point)
+pnpm install
+pnpm build      # emits dist/index.js (the plugin entry point)
 ```
 
 Useful scripts:
 
 | Script | Purpose |
 | --- | --- |
-| `npm run build` | Compile TypeScript to `dist/` (`tsc`). |
-| `npm test` | Run the test suite (`vitest run`). |
-| `npm run typecheck` | Type-check without emitting (`tsc --noEmit`). |
-| `npm run lint` | Lint with ESLint. |
-| `npm run format` | Check formatting with Prettier. |
+| `pnpm build` | Compile TypeScript to `dist/` (`tsc`). |
+| `pnpm test` | Run the test suite (`vitest run`). |
+| `pnpm typecheck` | Type-check without emitting (`tsc --noEmit`). |
+| `pnpm lint` | Lint with ESLint. |
+| `pnpm format` | Check formatting with Prettier. |
 
 ### 2. Register the plugin in OpenCode
 
