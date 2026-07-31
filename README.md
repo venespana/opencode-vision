@@ -1,5 +1,11 @@
 # opencode-vision
 
+[![npm version](https://img.shields.io/npm/v/@venespana/opencode-vision)](https://www.npmjs.com/package/@venespana/opencode-vision)
+[![CI](https://github.com/venespana/opencode-vision/actions/workflows/ci.yml/badge.svg)](https://github.com/venespana/opencode-vision/actions/workflows/ci.yml)
+[![Release](https://github.com/venespana/opencode-vision/actions/workflows/release.yml/badge.svg)](https://github.com/venespana/opencode-vision/actions/workflows/release.yml)
+[![Coverage](https://codecov.io/gh/venespana/opencode-vision/branch/main/graph/badge.svg)](https://codecov.io/gh/venespana/opencode-vision)
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](./LICENSE)
+
 Give text-only (non-vision) OpenCode models the ability to see images.
 
 `opencode-vision` is an OpenCode plugin that intercepts images pasted into chat, routes them through a configurable vision backend (an MCP server or a local CLI), and injects the resulting text description back into the conversation — so models without native vision can still reason about images.
@@ -355,6 +361,17 @@ Publishing is driven by **GitHub Releases**. No manual `npm publish` is needed.
    ```
 
 > You can also run the workflow manually from the Actions tab (`workflow_dispatch`) — in that case the version comes from `package.json` as-is.
+
+---
+
+## Testing & Coverage
+
+```bash
+pnpm test       # run the test suite
+pnpm coverage   # run tests with V8 coverage
+```
+
+Current coverage: **81% lines** across `src/` (excluding `index.ts`, the plugin entry-point glue that requires the live OpenCode runtime). Coverage is tracked continuously via the [CI workflow](https://github.com/venespana/opencode-vision/actions/workflows/ci.yml) and reported through [Codecov](https://codecov.io/gh/venespana/opencode-vision).
 
 ---
 
