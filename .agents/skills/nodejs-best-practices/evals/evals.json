@@ -1,0 +1,249 @@
+{
+  "skill_name": "nodejs-best-practices",
+  "version": "1.0",
+  "benchmark_schema": {
+    "rubric": {
+      "principles_adherence": "0-3 — Applied relevant SOLID/YAGNI/KISS/DRY? 0=ignored, 1=mentioned, 2=applied, 3=applied with trade-off discussion",
+      "comment_quality": "0-3 — WHY-only comments? 0=narrative, 1=mixed, 2=mostly WHY, 3=WHY only or none needed",
+      "naming_descriptiveness": "0-3 — Intentional names? 0=single letters, 3=self-documenting",
+      "anti_patterns_avoided": "0-3 — Avoided all listed anti-patterns? 0=all present, 3=none"
+    },
+    "pass_threshold": "All rubric items >= 2. Total >= 8/12 to pass.",
+    "applies_principles": [
+      "SRP",
+      "OCP",
+      "LSP",
+      "ISP",
+      "DIP",
+      "YAGNI",
+      "KISS",
+      "DRY"
+    ]
+  },
+  "evals": [
+    {
+      "id": 1,
+      "category": "naming-and-comments",
+      "prompt": "Review this Node.js function and improve it:\n```javascript\nfunction proc(d) {\n  // loop through data\n  let r = [];\n  for (let i = 0; i < d.length; i++) {\n    // check if valid\n    if (d[i].v === true) {\n      r.push(d[i]);\n    }\n  }\n  return r;\n}\n```",
+      "expected_output": "Function renamed to describe behavior. Variables renamed with intent. Comments removed. Filter logic clarified or replaced with `.filter()`.",
+      "files": [],
+      "expectations": [
+        "Function renamed (e.g., `filterValidEntries`)",
+        "Parameters and variables renamed (no `d`, `r`)",
+        "Narrative comments removed",
+        "Boolean check clarified (`d[i].v === true` → `entry.isValid` or similar)",
+        "No magic boolean without context"
+      ],
+      "benchmarks": {
+        "principles_applied": [
+          "KISS"
+        ],
+        "comment_rule_target": "no WHAT/HOW comments",
+        "naming_rule_target": "camelCase, descriptive, verb phrases for functions",
+        "anti_patterns_to_avoid": [
+          "single-letter names",
+          "narrative comments",
+          "opaque boolean property `.v`"
+        ],
+        "rubric": {
+          "principles_adherence": 3,
+          "comment_quality": 3,
+          "naming_descriptiveness": 3,
+          "anti_patterns_avoided": 3
+        }
+      }
+    },
+    {
+      "id": 2,
+      "category": "async-and-errors",
+      "prompt": "This function reads a file synchronously inside an async handler. Fix it:\n```javascript\nasync function getUserData(userId) {\n  const data = fs.readFileSync(`./users/${userId}.json`);\n  return JSON.parse(data);\n}\n```",
+      "expected_output": "Replace `readFileSync` with `fs.promises.readFile`. Add try/catch at boundary or let errors propagate. No sync I/O in async path.",
+      "files": [],
+      "expectations": [
+        "Replaced `readFileSync` with async `fs.promises.readFile`",
+        "No synchronous I/O in the async function",
+        "Errors either propagated or handled at boundary",
+        "Uses `await` correctly"
+      ],
+      "benchmarks": {
+        "principles_applied": [],
+        "comment_rule_target": "WHY only if explaining the event-loop constraint",
+        "naming_rule_target": "camelCase, descriptive",
+        "anti_patterns_to_avoid": [
+          "sync I/O in async context",
+          "blocking the event loop",
+          "unhandled promise rejection"
+        ],
+        "rubric": {
+          "principles_adherence": 3,
+          "comment_quality": 2,
+          "naming_descriptiveness": 2,
+          "anti_patterns_avoided": 3
+        }
+      }
+    },
+    {
+      "id": 3,
+      "category": "SRP-and-refactoring",
+      "prompt": "This module does too much. Refactor it:\n```javascript\n// user-controller.js\nimport fs from 'fs';\nimport { sendEmail } from './mailer.js';\nimport db from './db.js';\n\nexport function registerUser(req, res) {\n  const { email, password } = req.body;\n  // validate\n  if (!email || !password) return res.status(400).send('Missing fields');\n  // hash password\n  const hashed = crypto.createHash('sha256').update(password).digest('hex');\n  // save to db\n  const user = db.query('INSERT INTO users ...', [email, hashed]);\n  // write to log file\n  fs.writeFileSync('./logs/registrations.log', `${email}\\n`, { flag: 'a' });\n  // send welcome email\n  sendEmail(email, 'Welcome!');\n  res.json(user);\n}\n```",
+      "expected_output": "Split by actor: validation (validator/DTO), hashing (auth service), persistence (repository), logging (logger service), email (notification service). Controller stays thin.",
+      "files": [],
+      "expectations": [
+        "Validation extracted to its own unit",
+        "Password hashing moved to an auth service",
+        "DB access moved to a repository",
+        "Logging moved to a logger (async, structured)",
+        "Email moved to a notification service",
+        "Controller only orchestrates"
+      ],
+      "benchmarks": {
+        "principles_applied": [
+          "SRP"
+        ],
+        "comment_rule_target": "WHY only",
+        "naming_rule_target": "camelCase, descriptive file/class names",
+        "anti_patterns_to_avoid": [
+          "fat controller",
+          "sync I/O for logging",
+          "multiple concerns in one function",
+          "narrative comments"
+        ],
+        "rubric": {
+          "principles_adherence": 3,
+          "comment_quality": 2,
+          "naming_descriptiveness": 3,
+          "anti_patterns_avoided": 3
+        }
+      }
+    },
+    {
+      "id": 4,
+      "category": "YAGNI-overengineering",
+      "prompt": "I wrote this flexible event emitter with plugins. Is this good?\n```javascript\nclass EventEmitter {\n  constructor(config = { maxListeners: 10, async: true, persistent: false, priority: 'normal' }) {\n    this.config = config;\n    this.plugins = [];\n    this.middleware = [];\n  }\n  registerPlugin(plugin) { this.plugins.push(plugin); }\n  use(middleware) { this.middleware.push(middleware); }\n  emit(event, data) { /* ... */ }\n}\n// Usage: const e = new EventEmitter(); e.emit('click', {});\n```",
+      "expected_output": "YAGNI violation. The config options, plugin system, and middleware chain have zero callers. Start with a plain function or Node's built-in `EventEmitter`. Add complexity when a real need appears.",
+      "files": [],
+      "expectations": [
+        "Identifies YAGNI violation",
+        "Recommends built-in EventEmitter or simple function",
+        "Flags unused config options and plugin system",
+        "Does not preserve speculative features"
+      ],
+      "benchmarks": {
+        "principles_applied": [
+          "YAGNI",
+          "KISS"
+        ],
+        "comment_rule_target": "no comments needed",
+        "naming_rule_target": "PascalCase classes",
+        "anti_patterns_to_avoid": [
+          "speculative generality",
+          "unused config options",
+          "plugin system with zero plugins",
+          "premature middleware abstraction"
+        ],
+        "rubric": {
+          "principles_adherence": 3,
+          "comment_quality": 3,
+          "naming_descriptiveness": 2,
+          "anti_patterns_avoided": 3
+        }
+      }
+    },
+    {
+      "id": 5,
+      "category": "config-and-env",
+      "prompt": "Is this a good way to handle configuration?\n```javascript\n// Inside business logic, scattered across files:\nconst apiKey = process.env.API_KEY;\nconst dbUrl = process.env.DATABASE_URL;\nconst port = process.env.PORT || 3000;\nconst retries = process.env.RETRIES || 3;\n```",
+      "expected_output": "Move all env access to a single validated config module loaded at startup. Inject the config object into business logic. Fail fast if required vars are missing.",
+      "files": [],
+      "expectations": [
+        "Env vars read once at startup, not scattered",
+        "Config validated with schema (zod/joi)",
+        "Typed config object injected, not process.env",
+        "Fails fast on missing required config"
+      ],
+      "benchmarks": {
+        "principles_applied": [
+          "DIP",
+          "SRP"
+        ],
+        "comment_rule_target": "WHY if explaining startup validation",
+        "naming_rule_target": "SCREAMING_SNAKE for env, camelCase for config",
+        "anti_patterns_to_avoid": [
+          "process.env scattered in business logic",
+          "no validation",
+          "string coercion without schema",
+          "magic defaults inline"
+        ],
+        "rubric": {
+          "principles_adherence": 3,
+          "comment_quality": 2,
+          "naming_descriptiveness": 2,
+          "anti_patterns_avoided": 3
+        }
+      }
+    },
+    {
+      "id": 6,
+      "category": "error-handling",
+      "prompt": "What is wrong with this error handling?\n```javascript\nasync function processPayment(orderId) {\n  try {\n    const order = await fetchOrder(orderId);\n    const result = await chargeCard(order);\n    return result;\n  } catch (e) {\n    return null;\n  }\n}\n```",
+      "expected_output": "Swallowing errors with `catch { return null }` hides failures. Throw domain-specific errors, catch at the boundary (route handler), log with context, return appropriate HTTP status.",
+      "files": [],
+      "expectations": [
+        "Identifies swallowed error anti-pattern",
+        "Recommends throwing or re-throwing with context",
+        "Domain-specific error classes suggested",
+        "Catch moved to boundary, not inside business logic"
+      ],
+      "benchmarks": {
+        "principles_applied": [],
+        "comment_rule_target": "WHY if explaining error visibility",
+        "naming_rule_target": "descriptive error names",
+        "anti_patterns_to_avoid": [
+          "catch {} swallowing",
+          "returning null on error",
+          "no error context",
+          "no logging"
+        ],
+        "rubric": {
+          "principles_adherence": 3,
+          "comment_quality": 2,
+          "naming_descriptiveness": 2,
+          "anti_patterns_avoided": 3
+        }
+      }
+    },
+    {
+      "id": 7,
+      "prompt": "This Express handler has deeply nested conditionals. Refactor using early returns:\n```javascript\nasync function createUser(req, res) {\n  if (req.body) {\n    if (req.body.email) {\n      if (req.body.password) {\n        if (req.body.password.length >= 8) {\n          const user = await db.createUser(req.body);\n          if (user) {\n            res.json(user);\n          } else {\n            res.status(500).json({ error: 'creation failed' });\n          }\n        } else {\n          res.status(400).json({ error: 'password too short' });\n        }\n      } else {\n        res.status(400).json({ error: 'password required' });\n      }\n    } else {\n      res.status(400).json({ error: 'email required' });\n    }\n  } else {\n    res.status(400).json({ error: 'body required' });\n  }\n}\n```",
+      "expected_output": "Flatten with guard clauses. Each validation returns early. The happy path (createUser + response) is at the base level.",
+      "expectations": [
+        "Each validation is a guard clause with early return",
+        "Happy path at base indentation",
+        "No more than 1 level of nesting in the happy path",
+        "No else after returning if",
+        "Same validation behavior preserved"
+      ],
+      "category": "early-return",
+      "files": [],
+      "benchmarks": {
+        "principles_applied": [
+          "KISS"
+        ],
+        "comment_rule_target": "no comments needed (code is self-explanatory)",
+        "naming_rule_target": "descriptive, language-appropriate casing",
+        "anti_patterns_to_avoid": [
+          "nested if/else chains",
+          "happy path buried in nesting",
+          "else after returning if",
+          "3+ levels of indentation"
+        ],
+        "rubric": {
+          "principles_adherence": 3,
+          "comment_quality": 3,
+          "naming_descriptiveness": 2,
+          "anti_patterns_avoided": 3
+        }
+      }
+    }
+  ]
+}
