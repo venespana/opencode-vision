@@ -1,10 +1,34 @@
 {
-  "name": "opencode-vision",
+  "name": "@venespana/opencode-vision",
   "version": "0.1.0",
   "description": "OpenCode plugin: vision for text-only models — intercepts pasted images, materializes to disk, routes to a VisionBackend, injects description back into chat context.",
   "type": "module",
   "packageManager": "pnpm@11.18.0",
   "main": "./dist/index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/venespana/opencode-vision.git"
+  },
+  "homepage": "https://github.com/venespana/opencode-vision#readme",
+  "bugs": {
+    "url": "https://github.com/venespana/opencode-vision/issues"
+  },
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "vision",
+    "image",
+    "mcp",
+    "minimax",
+    "accessibility"
+  ],
+  "author": "venespana",
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "exports": {
     ".": "./dist/index.js"
   },

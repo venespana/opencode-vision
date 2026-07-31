@@ -323,11 +323,44 @@ The intent is to extract enough detail that the image could be understood (or la
 
 ---
 
+## Releases & publishing
+
+Publishing is driven by **GitHub Releases**. No manual `npm publish` is needed.
+
+1. **Create a GitHub Release** tagged `vX.Y.Z` (e.g. `v0.1.0`). This triggers the `Release` workflow (`.github/workflows/release.yml`), which:
+   - installs dependencies with `pnpm` (frozen lockfile),
+   - builds the plugin (`pnpm build`),
+   - runs the test suite (`pnpm test`) — the publish is skipped if any test fails,
+   - sets the published version from the release tag (the `v` prefix is stripped, so `v0.1.0` → `0.1.0`),
+   - publishes `@venespana/opencode-vision` to the public npm registry with **build provenance** (`npm publish --provenance`).
+
+2. **Published version = release tag.** The version in `package.json` is overwritten in CI from `github.event.release.tag_name` (minus the leading `v`), so the npm package always matches the tag exactly.
+
+3. **Required secret: `NPM_TOKEN`.** The repo (or an environment) must define a secret named `NPM_TOKEN` containing an npm access token with publish rights for the `@venespana/opencode-vision` package. A **granular access token** scoped to that single package is recommended. If the npm account enforces 2FA, use a granular/automation-capable token.
+
+4. **Provenance permission.** The workflow already declares `id-token: write`, which npm needs to attach OIDC-signed build provenance. Keep that permission.
+
+5. **Consume the published plugin** by installing it and referencing it in `opencode.json`:
+
+   ```bash
+   npm install @venespana/opencode-vision
+   ```
+
+   ```jsonc
+   {
+     "plugin": [
+      ["@venespana/opencode-vision", { /* ...options */ }]
+    ]
+   }
+   ```
+
+> You can also run the workflow manually from the Actions tab (`workflow_dispatch`) — in that case the version comes from `package.json` as-is.
+
+---
+
 ## License
 
-**AGPL-3.0** — as declared in `package.json`.
-
-> Note: the repository does not currently ship a top-level `LICENSE` file; the license is declared in `package.json`. Add a `LICENSE` file before distribution.
+**AGPL-3.0** — as declared in `package.json`. See [`LICENSE`](./LICENSE) for the full text.
 
 ---
 

@@ -1,0 +1,57 @@
+# Release workflow — publishes @venespana/opencode-vision to npm.
+#
+# Trigger: a GitHub Release is published (or a manual workflow_dispatch run).
+# Requires the repo secret `NPM_TOKEN` (npm access token with publish rights
+# for the @venespana/opencode-vision package). Provenance is enabled via
+# id-token: write, so the npm package is signed with build provenance.
+name: Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  id-token: write # REQUIRED for npm --provenance (OIDC)
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.18.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+          registry-url: "https://registry.npmjs.org" # wires NODE_AUTH_TOKEN into .npmrc
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Test
+        run: pnpm test
+
+      - name: Set version from release tag
+        if: github.event_name == 'release'
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          VERSION="${TAG#v}"
+          echo "Setting package version to $VERSION (from tag $TAG)"
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
+
+      - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --provenance
