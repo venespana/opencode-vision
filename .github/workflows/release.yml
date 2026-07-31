@@ -1,9 +1,10 @@
-# Release workflow — publishes @venespana/opencode-vision to npm.
+# Release workflow — publishes @venespana/opencode-vision to npm via
+# Trusted Publishing (OIDC). No npm token required.
 #
 # Trigger: a GitHub Release is published (or a manual workflow_dispatch run).
-# Requires the repo secret `NPM_TOKEN` (npm access token with publish rights
-# for the @venespana/opencode-vision package). Provenance is enabled via
-# id-token: write, so the npm package is signed with build provenance.
+# Prerequisite: configure a Trusted Publisher on npmjs.com for this package
+# pointing to: venespana/opencode-vision, workflow "release.yml".
+# Provenance is generated automatically by trusted publishing.
 name: Release
 
 on:
@@ -13,7 +14,7 @@ on:
 
 permissions:
   contents: read
-  id-token: write # REQUIRED for npm --provenance (OIDC)
+  id-token: write # REQUIRED for OIDC trusted publishing
 
 jobs:
   publish:
@@ -31,8 +32,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "26"
-          cache: "pnpm"
-          registry-url: "https://registry.npmjs.org" # wires NODE_AUTH_TOKEN into .npmrc
+          registry-url: "https://registry.npmjs.org"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -52,6 +52,4 @@ jobs:
           npm version "$VERSION" --no-git-tag-version --allow-same-version
 
       - name: Publish to npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --provenance
+        run: npm publish
