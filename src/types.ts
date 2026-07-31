@@ -45,6 +45,7 @@ export const CliBackendConfigSchema = z.object({
   args: z.array(z.string()).default([]),
   promptFlag: z.string().optional(),
   jsonFlag: z.string().optional(),
+  imageFlag: z.string().optional(),
   env: z.record(z.string()).optional(),
   timeoutMs: z.number().int().positive().default(30000),
 });
@@ -71,6 +72,8 @@ export const PluginConfigSchema = z.object({
   tempDir: z.string().default(() => `${process.env.TMPDIR || '/tmp'}/opencode-vision`),
   cleanupAfterHours: z.number().int().nonnegative().default(24),
   cleanup: CleanupModeSchema.default('init'),
+  debug: z.boolean().optional(),
+  logFile: z.string().optional(),
 });
 export type PluginConfig = z.infer<typeof PluginConfigSchema>;
 

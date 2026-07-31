@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 describe('detection', () => {
   describe('shouldActivate', () => {
@@ -84,6 +84,132 @@ describe('detection', () => {
       const model = { providerID: 'some', modelID: 'model' };
       // Should not throw — must fall back to pattern matching
       await expect(shouldActivate(model, { models: ['some/*'] })).resolves.not.toThrow();
+    });
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Real SDK (hey-api) client shape — these exercise realProvidersResolver via
+  // setClient, WITHOUT bypassing it via setProvidersResolver. The opencode SDK
+  // is built on hey-api, so client.config.providers() resolves to a wrapped
+  // { data: { providers: [...] }, error, request, response } envelope. Reading
+  // result.providers directly yields undefined → capabilities never resolve.
+  // ───────────────────────────────────────────────────────────────────────────
+  describe('shouldActivate (real hey-api client shape via setClient)', () => {
+    type ShouldActivate = (model: { providerID: string; modelID: string }, config?: { denylist?: string[]; models?: string[]; detection?: 'auto' | 'patterns' | 'hybrid' }) => Promise<boolean>;
+    let shouldActivate: ShouldActivate;
+    let setClient: (client: any, directory?: string) => void;
+    let setProvidersResolver: (resolver: any) => void;
+    let capCache: Map<string, { resolved: boolean; input: { image?: boolean } }>;
+
+    beforeEach(async () => {
+      vi.resetModules();
+      const detection = await import('./detection.js');
+      shouldActivate = detection.shouldActivate;
+      setClient = detection.setClient;
+      setProvidersResolver = detection.setProvidersResolver as any;
+      capCache = detection.capCache as any;
+      // Ensure realProvidersResolver is used (not an injected test resolver)
+      setProvidersResolver(null);
+      setClient(null);
+      capCache.clear();
+    });
+
+    afterEach(() => {
+      setClient(null);
+    });
+
+    // R1: text-only model activates when providers() returns the hey-api
+    // envelope { data: { providers: [...] } }. Before the fix, result.providers
+    // was undefined → resolveCapabilities threw → unresolved → activation=false.
+    it('R1: activates text-only model via real hey-api envelope { data: { providers } }', async () => {
+      setClient({
+        config: {
+          providers: async () => ({
+            data: {
+              providers: [
+                {
+                  id: 'zai-coding-plan',
+                  models: {
+                    'glm-5.2': {
+                      id: 'glm-5.2',
+                      capabilities: { input: { image: false } },
+                    },
+                  },
+                },
+              ],
+            },
+          }),
+        },
+      });
+      capCache.clear();
+      const result = await shouldActivate(
+        { providerID: 'zai-coding-plan', modelID: 'glm-5.2' },
+        { detection: 'auto' },
+      );
+      expect(result).toBe(true);
+    });
+
+    // R2: vision model is skipped BECAUSE it was detected as vision
+    // (resolved=true, input.image=true). Asserting on capCache distinguishes a
+    // correct detection from an unresolved fallback to the same boolean.
+    it('R2: skips vision model via real hey-api envelope (detected, not unresolved)', async () => {
+      setClient({
+        config: {
+          providers: async () => ({
+            data: {
+              providers: [
+                {
+                  id: 'zai-coding-plan',
+                  models: {
+                    'glm-5.2-vision': {
+                      id: 'glm-5.2-vision',
+                      capabilities: { input: { image: true } },
+                    },
+                  },
+                },
+              ],
+            },
+          }),
+        },
+      });
+      capCache.clear();
+      const result = await shouldActivate(
+        { providerID: 'zai-coding-plan', modelID: 'glm-5.2-vision' },
+        { detection: 'auto' },
+      );
+      expect(result).toBe(false);
+      const cached = capCache.get('zai-coding-plan:glm-5.2-vision');
+      expect(cached?.resolved).toBe(true);
+      expect(cached?.input.image).toBe(true);
+    });
+
+    // R3: regression guard for the `?? result?.providers` fallback branch — a
+    // client that returns an unwrapped { providers: [...] } (no `data` envelope)
+    // must still resolve after the fix.
+    it('R3: still resolves when providers() returns unwrapped { providers } (fallback branch)', async () => {
+      setClient({
+        config: {
+          providers: async () => ({
+            providers: [
+              {
+                id: 'legacy',
+                models: {
+                  'legacy-text': {
+                    id: 'legacy-text',
+                    capabilities: { input: { image: false } },
+                  },
+                },
+              },
+            ],
+          }),
+        },
+      });
+      capCache.clear();
+      const result = await shouldActivate(
+        { providerID: 'legacy', modelID: 'legacy-text' },
+        { detection: 'auto' },
+      );
+      expect(result).toBe(true);
     });
   });
 });

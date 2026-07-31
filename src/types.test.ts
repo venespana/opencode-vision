@@ -41,6 +41,86 @@ describe('types', () => {
       }
     });
 
+    it('should accept optional imageFlag in cli backend', () => {
+      const withFlag = {
+        models: [],
+        detection: 'hybrid',
+        backend: {
+          type: 'cli',
+          cli: { command: 'mmx', args: ['vision', 'describe'], imageFlag: '--image' },
+        },
+        promptTemplate: 'test',
+        tempDir: '/tmp/vision',
+        cleanupAfterHours: 24,
+        cleanup: 'init',
+      };
+      const result = PluginConfigSchema.safeParse(withFlag);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        const cliCfg = (result.data.backend as any).cli;
+        expect(cliCfg?.imageFlag).toBe('--image');
+      }
+    });
+
+    it('should accept cli backend without imageFlag (optional, backward compatible)', () => {
+      const withoutFlag = {
+        models: [],
+        detection: 'hybrid',
+        backend: {
+          type: 'cli',
+          cli: { command: 'mmx', args: ['vision'] },
+        },
+        promptTemplate: 'test',
+        tempDir: '/tmp/vision',
+        cleanupAfterHours: 24,
+        cleanup: 'init',
+      };
+      const result = PluginConfigSchema.safeParse(withoutFlag);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        const cliCfg = (result.data.backend as any).cli;
+        expect(cliCfg?.imageFlag).toBeUndefined();
+      }
+    });
+
+    it('should accept optional debug (boolean) and logFile (string) fields', () => {
+      const withDebug = {
+        models: [],
+        detection: 'hybrid',
+        backend: { type: 'mcp', mcp: { tool: 't' } },
+        promptTemplate: '',
+        tempDir: '/tmp/v',
+        cleanupAfterHours: 24,
+        cleanup: 'init',
+        debug: true,
+        logFile: '/tmp/vision-debug.log',
+      };
+      const result = PluginConfigSchema.safeParse(withDebug);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.debug).toBe(true);
+        expect(result.data.logFile).toBe('/tmp/vision-debug.log');
+      }
+    });
+
+    it('should treat debug and logFile as optional (defaults)', () => {
+      const minimal = {
+        models: [],
+        detection: 'hybrid',
+        backend: { type: 'mcp', mcp: { tool: 't' } },
+        promptTemplate: '',
+        tempDir: '/tmp/v',
+        cleanupAfterHours: 24,
+        cleanup: 'init',
+      };
+      const result = PluginConfigSchema.safeParse(minimal);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.debug).toBeUndefined();
+        expect(result.data.logFile).toBeUndefined();
+      }
+    });
+
     it('should reject backend.type "tool" with precise error', () => {
       const invalid = {
         models: [],

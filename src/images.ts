@@ -2,6 +2,7 @@ import { createHash } from 'crypto';
 import { writeFileSync, existsSync, mkdirSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
+import { debug } from './logger.js';
 import type { SavedImage } from './types.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -111,15 +112,19 @@ export function materialize(
       writeFileSync(filePath, buffer);
     }
 
-    return { partId, mime: mimeType as SavedImage['mime'], ref: filePath, origin: { kind: 'base64', path: filePath } };
+    const result: SavedImage = { partId, mime: mimeType as SavedImage['mime'], ref: filePath, origin: { kind: 'base64', path: filePath } };
+    debug(`saved image: ${filePath} (origin=base64)`);
+    return result;
   }
 
   if (origin.kind === 'file') {
     const resolved = fileURLToPath(`file://${origin.path}`);
+    debug(`saved image: ${resolved} (origin=file)`);
     return { partId, mime, ref: resolved, origin };
   }
 
   if (origin.kind === 'url') {
+    debug(`saved image: ${origin.url} (origin=url)`);
     return { partId, mime, ref: origin.url, origin };
   }
 

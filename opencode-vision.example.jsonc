@@ -47,9 +47,10 @@
     // For type "cli":
     // "cli": {
     //   "command": "mmx",
-    //   "args": ["vision"],
+    //   "args": ["vision", "describe"],  // mmx requires the "describe" subcommand
     //   "promptFlag": "--prompt",
     //   "jsonFlag": "--json",
+    //   "imageFlag": "--image",  // pass each image as "--image <ref>" instead of a positional arg
     //   "env": { "API_KEY": "..." },
     //   "timeoutMs": 30000  // default 30000ms
     // }
@@ -79,21 +80,5 @@
   //   "init"  — sweep tempDir on plugin initialization (DEFAULT)
   //   "never" — never auto-delete; rely on OS tmp cleanup or manual cleanup
   // ─────────────────────────────────────────────────────────────────────────────
-  "cleanup": "init",
-
-  // ─────────────────────────────────────────────────────────────────────────────
-  // CLI backend configuration (used when backend.type is "cli").
-  // command: the CLI executable to run
-  // args:    array of arguments; image paths/URLs and prompt are appended
-  // promptFlag:  if set, pass the prompt text via this flag (e.g. "--prompt")
-  // jsonFlag:    if set, add this flag to request JSON output
-  // env:         extra environment variables to pass to the subprocess
-  // timeoutMs:   timeout in milliseconds (default: 30000)
-  // ─────────────────────────────────────────────────────────────────────────────
-  "cli": {
-    "command": "mmx",
-    "args": ["vision"],
-    "promptFlag": "--prompt",
-    "timeoutMs": 30000
-  }
+  "cleanup": "init"
 }

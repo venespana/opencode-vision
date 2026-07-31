@@ -3,6 +3,7 @@ import { shouldActivate } from './detection.js';
 import { renderTemplate } from './prompt.js';
 import { McpBackend } from './backend/mcp.js';
 import { CliBackend } from './backend/cli.js';
+import { debug } from './logger.js';
 import type { PluginConfig, VisionResult, SavedImage } from './types.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -83,16 +84,36 @@ export function mutateParts(
 // Mutates output.messages in place.
 // ─────────────────────────────────────────────────────────────────────────────
 export async function applyVisionTransform(
-  input: { messages: Array<{ info: { model: { providerID: string; modelID: string } }; parts: any[] }> },
-  output: { messages: Array<{ info: { model: { providerID: string; modelID: string } }; parts: any[] }> },
+  output: { messages?: Array<{ info?: { model?: { providerID: string; modelID: string } }; parts?: any[] }> },
   config: PluginConfig,
   ctx?: { client?: any },
 ): Promise<void> {
-  // Deep copy input to output (do not mutate original)
-  output.messages = JSON.parse(JSON.stringify(input.messages));
+  // Messages are in output.messages (opencode populates them before calling the hook).
+  // The hook mutates output.messages in place.
+  if (!output?.messages || !Array.isArray(output.messages)) {
+    debug('transform: no messages in output, skipping');
+    return;
+  }
 
-  for (const msg of output.messages) {
+  let msgIndex = 0;
+  for (let idx = 0; idx < output.messages.length; idx++) {
+    msgIndex++;
+    const msg = output.messages[idx];
+
+    // Guard: message must have info.model and parts
+    if (!msg?.info?.model || !msg?.parts || !Array.isArray(msg.parts)) {
+      debug(`message ${msgIndex}: missing info.model or parts, skipping`);
+      continue;
+    }
+
     const { model } = msg.info;
+    debug(`message ${msgIndex} model=${model.providerID}/${model.modelID}`);
+
+    // Diagnostic: log all part types and mimes
+    for (const p of msg.parts) {
+      const meta = p.type === 'file' ? ` mime=${p.mime} url=${(p.url ?? '').substring(0, 60)}` : '';
+      debug(`  part: type=${p.type}${meta}`);
+    }
 
     // Step 1: Detection — should we activate?
     const activated = await shouldActivate(model, {
@@ -100,24 +121,31 @@ export async function applyVisionTransform(
       models: config.models,
       detection: config.detection,
     });
-    if (!activated) continue;
+    if (!activated) {
+      debug('shouldActivate=false');
+      continue;
+    }
+    debug('shouldActivate=true');
 
     // Step 2: Extract supported image FileParts
     const imageParts = extractImages(msg.parts);
-    if (imageParts.length === 0) continue;
+    if (imageParts.length === 0) {
+      debug('extracted 0 image(s)');
+      continue;
+    }
+    debug(`extracted ${imageParts.length} image(s)`);
 
     // Step 3: Idempotency — check sentinel marker
     const imageHashes: string[] = [];
     for (const img of imageParts) {
       if (img.origin?.kind === 'base64' && img.ref) {
-        // Extract hash from existing ref if available
         const match = img.ref.match(/vision-([a-f0-9]{64})/);
         if (match) imageHashes.push(match[1]);
       }
     }
 
     if (imageHashes.length > 0 && hasSentinelMarker(msg.parts, imageHashes)) {
-      // Already processed — short-circuit
+      debug('idempotent skip (sentinel present)');
       continue;
     }
 
@@ -150,13 +178,18 @@ export async function applyVisionTransform(
           : new CliBackend(config.backend.cli, ctx?.client);
 
       result = await backend.analyze({ images: savedImages, userText, prompt });
+      debug(`backend result mode=${result.mode} textLen=${result.text.length}`);
     } catch (err) {
       // Fail-soft: inject error description
       const msg2 = err instanceof Error ? err.message : String(err);
+      debug(`error: backend threw: ${msg2}`);
       result = { mode: 'inject-description', text: `[opencode-vision] backend error: ${msg2}` };
     }
 
-    // Step 7: Mutate parts in place
+    // Step 7: Mutate message parts in place.
+    // Clone the parts array so we don't corrupt the original message object
+    // if the same message is processed again on a transform rerun.
+    msg.parts = [...msg.parts];
     mutateParts(msg.parts, result, processedIds, imageHashes);
   }
 }

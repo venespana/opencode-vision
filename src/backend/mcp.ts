@@ -1,5 +1,6 @@
 import type { VisionBackend, SavedImage } from './types.js';
 import type { McpBackendConfig } from '../types.js';
+import { debug } from '../logger.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // McpBackend — inject-instructions mode
@@ -24,6 +25,7 @@ export class McpBackend implements VisionBackend {
       .filter(Boolean)
       .join('\n');
 
+    debug(`mcp instruction built; tool=${tool ?? '<unset>'}`);
     return Promise.resolve({ mode: 'inject-instructions', text: instruction });
   }
 }

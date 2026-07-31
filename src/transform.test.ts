@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { PluginConfig } from './types.js';
 
 describe('transform', () => {
-  let applyVisionTransform: (input: any, output: any, config: PluginConfig, ctx?: any) => Promise<void>;
+  let applyVisionTransform: (output: any, config: PluginConfig, ctx?: any) => Promise<void>;
   let hasSentinelMarker: (parts: any[], hashes?: string[]) => boolean;
   let mutateParts: (parts: any[], result: any, processedIds: Set<string>, hashes: string[]) => void;
 
@@ -42,15 +42,15 @@ describe('transform', () => {
 
   // S1: inject-instructions mode — FilePart removed, TextPart replaced with instruction
   it('S1: inject-instructions mode replaces existing TextPart with instruction', async () => {
-    const messages = [{
-      info: { model: { providerID: 'a', modelID: 'b' } },
-      parts: [
-        { type: 'file', mime: 'image/png', url: 'file:///tmp/a.png', id: 'img1' },
-        { type: 'text', text: 'hello' },
-      ],
-    }];
-
-    const output: any = { messages: [] };
+    const output: any = {
+      messages: [{
+        info: { model: { providerID: 'a', modelID: 'b' } },
+        parts: [
+          { type: 'file', mime: 'image/png', url: 'file:///tmp/a.png', id: 'img1' },
+          { type: 'text', text: 'hello' },
+        ],
+      }],
+    };
     const config: PluginConfig = {
       models: [], denylist: [], detection: 'hybrid',
       backend: { type: 'mcp', mcp: { tool: 'analyze' } },
@@ -62,7 +62,7 @@ describe('transform', () => {
       { id: 'img1', mime: 'image/png', url: 'file:///tmp/a.png', partId: 'img1' },
     ]);
 
-    await applyVisionTransform({ messages }, output, config);
+    await applyVisionTransform(output, config);
 
     const hasInstruction = output.messages[0].parts.some((p: any) =>
       p.type === 'text' && p.text?.includes('Use analyze'),
@@ -75,15 +75,15 @@ describe('transform', () => {
 
   // S2: inject-description mode — FilePart removed, synthetic TextPart pushed
   it('S2: inject-description mode pushes synthetic TextPart with description', async () => {
-    const messages = [{
-      info: { model: { providerID: 'a', modelID: 'b' } },
-      parts: [
-        { type: 'file', mime: 'image/png', url: 'file:///tmp/a.png', id: 'img1' },
-        { type: 'text', text: 'hello' },
-      ],
-    }];
-
-    const output: any = { messages: [] };
+    const output: any = {
+      messages: [{
+        info: { model: { providerID: 'a', modelID: 'b' } },
+        parts: [
+          { type: 'file', mime: 'image/png', url: 'file:///tmp/a.png', id: 'img1' },
+          { type: 'text', text: 'hello' },
+        ],
+      }],
+    };
     const config: PluginConfig = {
       models: [], denylist: [], detection: 'hybrid',
       backend: { type: 'cli', cli: { command: 'mmx', args: [], timeoutMs: 30000 } },
@@ -95,7 +95,7 @@ describe('transform', () => {
       { id: 'img1', mime: 'image/png', url: 'file:///tmp/a.png', partId: 'img1' },
     ]);
 
-    await applyVisionTransform({ messages }, output, config);
+    await applyVisionTransform(output, config);
 
     const hasSynthetic = output.messages[0].parts.some((p: any) =>
       p.type === 'text' && p.synthetic === true && p.text?.includes('A cat'),
@@ -105,25 +105,19 @@ describe('transform', () => {
 
   // S3: Idempotent rerun — sentinel marker short-circuits processing
   it('S3: message with sentinel marker short-circuits (idempotent)', async () => {
-    // When sentinel is detected (hasSentinelMarker returns true),
-    // applyVisionTransform should skip backend call and leave parts unchanged.
-    // We test this by verifying hasSentinelMarker returns true for the sentinel.
     const { extractImages } = await import('./images.js');
     (extractImages as any).mockReturnValue([
       { id: 'img1', mime: 'image/png', url: 'file:///tmp/a.png', partId: 'img1' },
     ]);
 
-    const messages = [{
-      info: { model: { providerID: 'a', modelID: 'b' } },
-      parts: [
-        { type: 'text', text: '<!--opencode-vision mode=inject-instructions hashes=abc123,def456-->Use analyze tool' },
-        { type: 'file', mime: 'image/png', url: 'file:///tmp/a.png', id: 'img1' },
-      ],
-    }];
+    const parts = [
+      { type: 'text', text: '<!--opencode-vision mode=inject-instructions hashes=abc123,def456-->Use analyze tool' },
+      { type: 'file', mime: 'image/png', url: 'file:///tmp/a.png', id: 'img1' },
+    ];
 
     // The sentinel is present → hasSentinelMarker returns true (verified below)
-    expect(hasSentinelMarker(messages[0].parts, ['abc123', 'def456'])).toBe(true);
-    expect(hasSentinelMarker(messages[0].parts, [])).toBe(true); // empty hashes = vacuously true
+    expect(hasSentinelMarker(parts, ['abc123', 'def456'])).toBe(true);
+    expect(hasSentinelMarker(parts, [])).toBe(true); // empty hashes = vacuously true
   });
 
   // S6: Vision model untouched — shouldActivate returns false
@@ -131,22 +125,22 @@ describe('transform', () => {
     const { shouldActivate } = await import('./detection.js');
     (shouldActivate as any).mockResolvedValue(false);
 
-    const messages = [{
-      info: { model: { providerID: 'a', modelID: 'b' } },
-      parts: [
-        { type: 'file', mime: 'image/png', url: 'file:///tmp/a.png', id: 'img1' },
-        { type: 'text', text: 'hello' },
-      ],
-    }];
-
-    const output: any = { messages: [] };
+    const output: any = {
+      messages: [{
+        info: { model: { providerID: 'a', modelID: 'b' } },
+        parts: [
+          { type: 'file', mime: 'image/png', url: 'file:///tmp/a.png', id: 'img1' },
+          { type: 'text', text: 'hello' },
+        ],
+      }],
+    };
     const config: PluginConfig = {
       models: [], denylist: [], detection: 'hybrid',
       backend: { type: 'mcp', mcp: { tool: 'analyze' } },
       promptTemplate: '', tempDir: '/tmp', cleanupAfterHours: 24, cleanup: 'init',
     };
 
-    await applyVisionTransform({ messages }, output, config);
+    await applyVisionTransform(output, config);
 
     expect(output.messages[0].parts).toHaveLength(2);
     expect(output.messages[0].parts[0].type).toBe('file');
@@ -157,22 +151,22 @@ describe('transform', () => {
     const { extractImages } = await import('./images.js');
     (extractImages as any).mockReturnValue([]); // no supported images
 
-    const messages = [{
-      info: { model: { providerID: 'a', modelID: 'b' } },
-      parts: [
-        { type: 'file', mime: 'application/pdf', url: 'file:///tmp/doc.pdf', id: 'pdf1' },
-        { type: 'text', text: 'hello' },
-      ],
-    }];
-
-    const output: any = { messages: [] };
+    const output: any = {
+      messages: [{
+        info: { model: { providerID: 'a', modelID: 'b' } },
+        parts: [
+          { type: 'file', mime: 'application/pdf', url: 'file:///tmp/doc.pdf', id: 'pdf1' },
+          { type: 'text', text: 'hello' },
+        ],
+      }],
+    };
     const config: PluginConfig = {
       models: [], denylist: [], detection: 'hybrid',
       backend: { type: 'mcp', mcp: { tool: 'analyze' } },
       promptTemplate: '', tempDir: '/tmp', cleanupAfterHours: 24, cleanup: 'init',
     };
 
-    await applyVisionTransform({ messages }, output, config);
+    await applyVisionTransform(output, config);
 
     // PDF kept as-is (unsupported → extractImages returns empty)
     expect(output.messages[0].parts).toHaveLength(2);

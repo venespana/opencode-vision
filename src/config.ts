@@ -1,5 +1,5 @@
 import { readFileSync } from 'fs';
-import { resolve } from 'path';
+import { resolve, join } from 'path';
 import os from 'os';
 import stripJsonComments from 'strip-json-comments';
 import { PluginConfigSchema, type PluginConfig } from './types.js';
@@ -53,6 +53,15 @@ export function overlayDeep(
 // ─────────────────────────────────────────────────────────────────────────────
 export function applyDefaults(merged: Record<string, unknown>): PluginConfig {
   // Schema defaults handle all missing fields — merged values override them
+  // Amendment: when `debug` is true and `logFile` is unset, default the log
+  // file to `${tempDir}/debug.log` (resolved against the final tempDir).
+  if (merged.debug === true && !merged.logFile) {
+    const tempDir =
+      typeof merged.tempDir === 'string'
+        ? merged.tempDir
+        : `${process.env.TMPDIR || '/tmp'}/opencode-vision`;
+    merged = { ...merged, logFile: join(tempDir, 'debug.log') };
+  }
   const cfg = PluginConfigSchema.parse(merged);
   return cfg;
 }

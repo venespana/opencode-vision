@@ -1,5 +1,7 @@
 // No crypto needed in detection — hashing is done in images.ts
 
+import { debug } from './logger.js';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Types (re-exported from types.ts for convenience)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -63,9 +65,13 @@ async function resolveCapabilities(
     const resolver = providersResolver ?? realProvidersResolver;
     const result = await resolver();
     for (const p of result.providers) {
-      if (p.provider !== providerID) continue;
-      for (const m of p.models) {
+      // SDK Provider uses `id`, not `provider`
+      if (p.provider !== providerID && p.id !== providerID) continue;
+      // SDK Provider.models is a Record { [key: string]: Model }, not an array
+      const models = Array.isArray(p.models) ? p.models : Object.values(p.models);
+      for (const m of models) {
         if (m.id !== modelID) continue;
+        debug('detection: matched model=' + providerID + '/' + modelID + ' input.image=' + m.capabilities.input?.image);
         const entry: CapEntry = {
           resolved: true,
           input: { image: m.capabilities.input?.image ?? false },
@@ -87,20 +93,41 @@ async function resolveCapabilities(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Real SDK providers resolver — uses globalThis (SDK injects client there)
+// Real SDK providers resolver — uses the client injected by the plugin context.
+// Falls back to globalThis.__opencode_client__ if set (older SDK versions).
 // ─────────────────────────────────────────────────────────────────────────────
+let injectedClient: any = null;
+let injectedDirectory: string | undefined = undefined;
+
+export function setClient(client: any, directory?: string): void {
+  injectedClient = client;
+  injectedDirectory = directory;
+}
+
 async function realProvidersResolver() {
-   
-  const client = (globalThis as any).__opencode_client__;
+  const client = injectedClient ?? (globalThis as any).__opencode_client__;
+  debug('detection: client=' + (client ? 'yes' : 'no') + ' config=' + (client?.config ? 'yes' : 'no') + ' providers=' + (typeof client?.config?.providers));
   if (!client?.config?.providers) {
     return { providers: [] };
   }
-  return client.config.providers() as Promise<{
-    providers: Array<{
-      provider: string;
-      models: Array<{ id: string; capabilities: { input?: { image?: boolean } } }>;
-    }>;
-  }>;
+  try {
+    const result = await client.config.providers({ directory: injectedDirectory });
+    // opencode SDK is built on hey-api: providers() resolves to a wrapped
+    // { data: { providers: [...] }, error, request, response } envelope.
+    // Fall back to result?.providers for any version that unwraps differently.
+    const providers = result?.data?.providers ?? result?.providers ?? [];
+    debug('detection: providers() returned ' + providers.length + ' providers');
+    if (providers.length > 0) {
+      const p0 = providers[0];
+      debug('detection: result top-level keys=' + JSON.stringify(Object.keys(result ?? {})));
+      debug('detection: provider[0] keys=' + JSON.stringify(Object.keys(p0)));
+      debug('detection: provider[0].id=' + p0.id + ' models type=' + typeof p0.models + (Array.isArray(p0.models) ? ' (array)' : ' (object)'));
+    }
+    return { providers };
+  } catch (err) {
+    debug('detection: providers() threw: ' + (err instanceof Error ? err.message : String(err)));
+    return { providers: [] };
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -126,6 +153,7 @@ export async function shouldActivate(
   // 1. Denylist check — force-off (005)
   for (const pattern of denylist) {
     if (matchPattern(pattern, model.providerID, model.modelID)) {
+      debug(`shouldActivate=false reason=denylist pattern=${pattern}`);
       return false;
     }
   }
@@ -133,18 +161,26 @@ export async function shouldActivate(
   // 2. Allowlist check — force-on (005)
   for (const pattern of models) {
     if (matchPattern(pattern, model.providerID, model.modelID)) {
+      debug(`shouldActivate=true reason=allowlist pattern=${pattern}`);
       return true;
     }
   }
 
   // 3. Auto-detect via capability resolution
   const cap = await resolveCapabilities(model.providerID, model.modelID);
+  debug(`capabilities resolved=${cap.resolved} input.image=${cap.input.image}`);
 
   if (cap.resolved) {
     // 002: vision model → skip
-    if (cap.input.image === true) return false;
+    if (cap.input.image === true) {
+      debug('shouldActivate=false reason=vision-model (caps resolved, input.image=true)');
+      return false;
+    }
     // 003: text-only → activate
-    if (cap.input.image === false) return true;
+    if (cap.input.image === false) {
+      debug('shouldActivate=true reason=text-only-model (caps resolved, input.image=false)');
+      return true;
+    }
     // Fall through to hybrid/patterns fallback
   }
 
@@ -153,10 +189,12 @@ export async function shouldActivate(
     // Empty allowlist → false
     for (const pattern of models) {
       if (matchPattern(pattern, model.providerID, model.modelID)) {
+        debug(`shouldActivate=true reason=hybrid/patterns-allowlist pattern=${pattern}`);
         return true;
       }
     }
   }
 
+  debug('shouldActivate=false reason=unresolvable-fallback (no match)');
   return false;
 }

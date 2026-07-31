@@ -106,6 +106,116 @@ describe('backend/cli', () => {
     expect(result.text).toMatch(/\[opencode-vision\]/);
   });
 
+  // imageFlag: single image → "--image <path>", no trailing positional
+  it('imageFlag set + single image → spawns "--image <path>" and omits bare path', async () => {
+    const { spawn } = await import('child_process');
+    const mockSpawn = (spawn as any).mockImplementation(() => {
+      const mock = {
+        stdout: { on: (event: string, cb: (data: string) => void) => { if (event === 'data') cb('desc'); } },
+        stderr: { on: vi.fn() },
+        on: (event: string, cb: (code: number) => void) => { if (event === 'close') cb(0); },
+        kill: vi.fn(),
+      };
+      return mock;
+    });
+
+    const backend = new CliBackend({
+      command: 'mmx',
+      args: ['vision', 'describe'],
+      promptFlag: '--prompt',
+      imageFlag: '--image',
+    });
+    await backend.analyze({
+      images: [{ partId: 'p1', mime: 'image/png', ref: '/tmp/img.png', origin: { kind: 'file', path: '/tmp/img.png' } }],
+      userText: 'test',
+      prompt: 'Describe this.',
+    });
+
+    expect(mockSpawn).toHaveBeenCalled();
+    const passedArgs = mockSpawn.mock.calls[0][1] as string[];
+    // --image <path> present
+    expect(passedArgs).toContain('--image');
+    const flagIdx = passedArgs.indexOf('--image');
+    expect(passedArgs[flagIdx + 1]).toBe('/tmp/img.png');
+    // bare path NOT appended as trailing positional (last element is the path after --image, not a duplicate)
+    expect(passedArgs[passedArgs.length - 1]).toBe('/tmp/img.png');
+    // exactly one occurrence of the bare path, and it's the value right after the flag
+    const bareOccurrences = passedArgs.filter((a) => a === '/tmp/img.png').length;
+    expect(bareOccurrences).toBe(1);
+    // args contain the describe subcommand
+    expect(passedArgs).toContain('vision');
+    expect(passedArgs).toContain('describe');
+  });
+
+  // imageFlag: two images → "--image <ref1> --image <ref2>"
+  it('imageFlag set + two images → spawns repeated "--image <ref1> --image <ref2>"', async () => {
+    const { spawn } = await import('child_process');
+    const mockSpawn = (spawn as any).mockImplementation(() => {
+      const mock = {
+        stdout: { on: (event: string, cb: (data: string) => void) => { if (event === 'data') cb('desc'); } },
+        stderr: { on: vi.fn() },
+        on: (event: string, cb: (code: number) => void) => { if (event === 'close') cb(0); },
+        kill: vi.fn(),
+      };
+      return mock;
+    });
+
+    const backend = new CliBackend({
+      command: 'mmx',
+      args: ['vision', 'describe'],
+      imageFlag: '--image',
+    });
+    await backend.analyze({
+      images: [
+        { partId: 'p1', mime: 'image/png', ref: '/tmp/a.png', origin: { kind: 'file', path: '/tmp/a.png' } },
+        { partId: 'p2', mime: 'image/png', ref: '/tmp/b.png', origin: { kind: 'file', path: '/tmp/b.png' } },
+      ],
+      userText: 'test',
+      prompt: '',
+    });
+
+    expect(mockSpawn).toHaveBeenCalled();
+    const passedArgs = mockSpawn.mock.calls[0][1] as string[];
+    // two --image flags
+    const imageFlagIndices: number[] = [];
+    passedArgs.forEach((a, i) => { if (a === '--image') imageFlagIndices.push(i); });
+    expect(imageFlagIndices.length).toBe(2);
+    expect(passedArgs[imageFlagIndices[0] + 1]).toBe('/tmp/a.png');
+    expect(passedArgs[imageFlagIndices[1] + 1]).toBe('/tmp/b.png');
+  });
+
+  // Regression guard: no imageFlag → existing positional behavior
+  it('no imageFlag → appends image refs as trailing positional args (regression)', async () => {
+    const { spawn } = await import('child_process');
+    const mockSpawn = (spawn as any).mockImplementation(() => {
+      const mock = {
+        stdout: { on: (event: string, cb: (data: string) => void) => { if (event === 'data') cb('desc'); } },
+        stderr: { on: vi.fn() },
+        on: (event: string, cb: (code: number) => void) => { if (event === 'close') cb(0); },
+        kill: vi.fn(),
+      };
+      return mock;
+    });
+
+    const backend = new CliBackend({
+      command: 'mmx',
+      args: ['vision'],
+      promptFlag: '--prompt',
+    });
+    await backend.analyze({
+      images: [{ partId: 'p1', mime: 'image/png', ref: '/tmp/img.png', origin: { kind: 'file', path: '/tmp/img.png' } }],
+      userText: 'test',
+      prompt: 'Describe this.',
+    });
+
+    expect(mockSpawn).toHaveBeenCalled();
+    const passedArgs = mockSpawn.mock.calls[0][1] as string[];
+    // no --image flag present
+    expect(passedArgs).not.toContain('--image');
+    // bare path is the trailing positional arg
+    expect(passedArgs[passedArgs.length - 1]).toBe('/tmp/img.png');
+  });
+
   // S5: env propagation
   it('S5: env variables are propagated to subprocess', async () => {
     const { spawn } = await import('child_process');
