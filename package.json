@@ -1,6 +1,6 @@
 {
   "name": "@venespana/opencode-vision",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "OpenCode plugin: vision for text-only models — intercepts pasted images, materializes to disk, routes to a VisionBackend, injects description back into chat context.",
   "type": "module",
   "packageManager": "pnpm@11.18.0",
@@ -35,6 +35,9 @@
   "files": [
     "dist/"
   ],
+  "dependencies": {
+    "strip-json-comments": "^5.0.0"
+  },
   "peerDependencies": {
     "@opencode-ai/plugin": ">=1.0.0"
   },
@@ -47,7 +50,6 @@
     "eslint": "^9.0.0",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.4.0",
-    "strip-json-comments": "^5.0.0",
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.0.0",
     "vitest": "^3.0.0",
