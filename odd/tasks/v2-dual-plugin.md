@@ -43,4 +43,4 @@ OpenCode V2 removed the V1 plugin API. The server logs `PluginModule.LoadError: 
 - Native review of this candidate remains due; run from a supported runtime (claude-code/codex) or after OpenCode transport conformance.
 
 ## Commits
-- (recorded after commit)
+- `b38f950` feat: support OpenCode V2 plugin API with dual-mode entry point (feature/v2-dual-plugin) — 7 files, +2481/−91 (includes pnpm-lock churn).
