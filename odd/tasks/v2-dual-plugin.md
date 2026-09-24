@@ -44,3 +44,4 @@ OpenCode V2 removed the V1 plugin API. The server logs `PluginModule.LoadError: 
 
 ## Commits
 - `b38f950` feat: support OpenCode V2 plugin API with dual-mode entry point (feature/v2-dual-plugin) — 7 files, +2481/−91 (includes pnpm-lock churn).
+- `7de0234` fix: pin @opencode/plugin to 2.0.15 for release-age policy — CI rejected the same-day 2.0.16 family (ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION); protobufjs build script denied in allowBuilds.
