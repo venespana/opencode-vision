@@ -21,12 +21,19 @@ export interface FilePart {
 const SUPPORTED_MIMES = new Set(['image/png', 'image/jpeg', 'image/webp']);
 
 // ─────────────────────────────────────────────────────────────────────────────
+// isSupportedMime — true for image MIME types the plugin can bridge
+// ─────────────────────────────────────────────────────────────────────────────
+export function isSupportedMime(mime: string): boolean {
+  return SUPPORTED_MIMES.has(mime);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // isSupportedImageFilePart — returns true if part is a supported image FilePart
 // ─────────────────────────────────────────────────────────────────────────────
 export function isSupportedImageFilePart(
   part: { type: string; mime?: string; url?: string },
 ): part is FilePart {
-  return part.type === 'file' && SUPPORTED_MIMES.has(part.mime ?? '');
+  return part.type === 'file' && isSupportedMime(part.mime ?? '');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
