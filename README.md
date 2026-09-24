@@ -59,7 +59,7 @@ Two injection modes exist (chosen automatically by backend type):
   - **MCP server** — [`openrouter-image-mcp`](https://github.com/JonathanJude/openrouter-image-mcp), or
   - **CLI** — the MiniMax CLI [`mmx`](https://github.com/MiniMax-AI/cli).
 
-> Plugin SDKs are peer dependencies: `@opencode-ai/plugin` `>=1.0.0` (V1, developed against `^1.18.0`) and `@opencode/plugin` `>=2.0.0` (V2, developed against `^2.0.16`).
+> Plugin SDKs are peer dependencies: `@opencode-ai/plugin` `>=1.0.0` (V1, developed against `^1.18.0`) and `@opencode/plugin` `>=2.0.0` (V2, developed against `2.0.15`).
 
 ---
 
