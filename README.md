@@ -20,7 +20,9 @@ The plugin ships **no vision capability of its own**. It is a bridge: you provid
 You paste an image into chat (using a text-only model)
         |
         v
- experimental.chat.messages.transform   <-- plugin hook fires
+ chat context transform                 <-- plugin hook fires
+                                            (V1: experimental.chat.messages.transform /
+                                             V2: session "context" hook)
         |
         v
  shouldActivate?  ---- no (vision model / denylist) ----> message passes through unchanged
@@ -52,12 +54,12 @@ Two injection modes exist (chosen automatically by backend type):
 ## Requirements
 
 - **Node.js >= 18** (uses `AbortSignal.timeout` and other modern APIs).
-- An **OpenCode** installation with the `experimental.chat.messages.transform` hook available.
+- An **OpenCode** installation — V1 (uses the `experimental.chat.messages.transform` hook) or V2 (uses the session `context` hook). The plugin auto-selects per runtime.
 - **At least one vision backend**, installed and working on its own. The plugin does not bundle vision. Choose one:
   - **MCP server** — [`openrouter-image-mcp`](https://github.com/JonathanJude/openrouter-image-mcp), or
   - **CLI** — the MiniMax CLI [`mmx`](https://github.com/MiniMax-AI/cli).
 
-> OpenCode plugin SDK is a peer dependency: `@opencode-ai/plugin` `>=1.0.0` (developed against `^1.18.0`).
+> Plugin SDKs are peer dependencies: `@opencode-ai/plugin` `>=1.0.0` (V1, developed against `^1.18.0`) and `@opencode/plugin` `>=2.0.0` (V2, developed against `2.0.15`).
 
 ---
 
@@ -105,6 +107,28 @@ OpenCode resolves a bare name `"opencode-vision"` to the local `dist/index.js` w
 ```
 
 The second element of the tuple is the **inline plugin options** object (see [Configuration](#configuration)). Once published to npm, the bare name form (`["opencode-vision", { ... }]`) will resolve from the registry.
+
+On **OpenCode V2**, register it under the `plugins` key (V2 also normalizes the V1 `plugin` array above automatically):
+
+```jsonc
+{
+  "plugins": [
+    "@venespana/opencode-vision"
+  ]
+}
+```
+
+or with inline options:
+
+```jsonc
+{
+  "plugins": [
+    { "package": "@venespana/opencode-vision", "options": { } }
+  ]
+}
+```
+
+The plugin ships one dual-mode entry point: V1 runtimes call `server()`, V2 runtimes call `setup()`.
 
 ### 3. Configure a backend
 
